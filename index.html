@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ScheduleTrack</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f5f5f5;color:#1a1a1a}
+:root{--blue:#1a56db;--blue-light:#ebf0ff;--blue-dark:#1e40af;--red:#dc2626;--red-light:#fef2f2;--green:#16a34a;--green-light:#f0fdf4;--amber:#d97706;--amber-light:#fffbeb;--gray:#6b7280;--border:#e5e7eb;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,0.08)}
+input,select,textarea{font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;width:100%;outline:none;background:#fff;color:#1a1a1a}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,86,219,0.1)}
+button{font-family:inherit;cursor:pointer;border-radius:var(--radius);font-size:13px;font-weight:500;border:none;transition:all 0.15s}
+.btn{padding:8px 16px;background:#fff;border:1px solid var(--border);color:#374151}
+.btn:hover{background:#f9fafb}
+.btn-primary{background:var(--blue);color:#fff;border:none;padding:8px 16px}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid #fecaca}
+.btn-danger:hover{background:#fee2e2}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-planned{background:#dbeafe;color:#1e40af}
+.badge-in_progress{background:#fef3c7;color:#92400e}
+.badge-completed{background:#d1fae5;color:#065f46}
+.badge-overdue{background:#fee2e2;color:#991b1b}
+.badge-open{background:#fef3c7;color:#92400e}
+.badge-under_review{background:#ede9fe;color:#5b21b6}
+.badge-closed{background:#d1fae5;color:#065f46}
+.badge-super_admin{background:#dbeafe;color:#1e40af}
+.badge-client_admin{background:#ede9fe;color:#5b21b6}
+.badge-user{background:#f3f4f6;color:#374151}
+.badge-active{background:#d1fae5;color:#065f46}
+.badge-inactive{background:#f3f4f6;color:#6b7280}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;font-weight:600;color:var(--gray);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;background:#f9fafb}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.sidebar{width:220px;min-width:220px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:10}
+.main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.content{padding:24px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#6b7280;cursor:pointer;border-left:3px solid transparent;transition:all 0.15s}
+.nav-item:hover{background:#f9fafb;color:#1a1a1a}
+.nav-item.active{color:var(--blue);background:var(--blue-light);border-left-color:var(--blue);font-weight:500}
+.nav-icon{width:18px;text-align:center;font-size:15px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.metric{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.metric-label{font-size:11px;color:var(--gray);margin-bottom:6px;font-weight:500}
+.metric-value{font-size:26px;font-weight:600}
+.metric-sub{font-size:11px;color:var(--gray);margin-top:2px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.form-field label{font-size:12px;font-weight:500;color:#374151}
+.form-field textarea{height:80px;resize:vertical}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:12px;width:560px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.modal-header{padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:16px}
+.section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray);margin:16px 0 10px;padding-top:16px;border-top:1px solid var(--border)}
+.section-title:first-child{margin-top:0;padding-top:0;border-top:none}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--blue-light);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--blue);flex-shrink:0}
+.empty-state{text-align:center;padding:48px 20px;color:var(--gray)}
+.empty-state svg{width:40px;height:40px;margin:0 auto 12px;display:block;opacity:0.3}
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1a1a;color:#fff;padding:12px 20px;border-radius:var(--radius);font-size:13px;z-index:999;animation:slideup 0.2s ease}
+@keyframes slideup{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+.alert-info{background:#ebf0ff;border:1px solid #c7d2fe;color:#1e40af;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px}
+.alert-error{background:var(--red-light);border:1px solid #fecaca;color:var(--red);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:18px;font-weight:600}
+.page-sub{font-size:13px;color:var(--gray);margin-top:2px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.filters input,.filters select{width:auto;min-width:140px}
+.detail-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-label{font-size:12px;color:var(--gray);width:160px;flex-shrink:0;padding-top:1px}
+.detail-value{font-size:13px}
+.comment-box{background:#f9fafb;border-radius:var(--radius);padding:10px 12px;margin-bottom:8px}
+.comment-meta{font-size:11px;color:var(--gray);margin-bottom:4px}
+.file-drop{border:2px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;font-size:13px;color:var(--gray);cursor:pointer}
+.file-drop:hover{border-color:var(--blue);background:var(--blue-light)}
+.sidebar-logo{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-bottom{padding:12px 16px;border-top:1px solid var(--border);margin-top:auto;display:flex;align-items:center;gap:10px}
+.nav-section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;padding:12px 16px 4px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.6s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f5}
+.login-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;width:380px;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { createClient } = window.supabase;
+const { useState, useEffect, useCallback, useRef } = React;
+
+const SUPABASE_URL = 'https://becoowtveruxxtfkhpmm.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlY29vd3R2ZXJ1eHh0ZmtocG1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxODY4ODMsImV4cCI6MjA5Nzc2Mjg4M30.36WyQPL369YjntOCTRiPDA2nM40DW8roT8_bkp379xY';
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── helpers ──────────────────────────────────────────────
+function initials(name='') { return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?'; }
+function fmt(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function Badge({v}) {
+  const labels={planned:'Planned',in_progress:'In Progress',completed:'Completed',overdue:'Overdue',open:'Open',under_review:'Under Review',closed:'Closed',super_admin:'Super Admin',client_admin:'Client Admin',user:'User',active:'Active',inactive:'Inactive'};
+  return <span className={`badge badge-${v}`}>{labels[v]||v}</span>;
+}
+function Avatar({name,size=28}) {
+  return <div className="avatar" style={{width:size,height:size,fontSize:size*0.38}}>{initials(name)}</div>;
+}
+function Toast({msg,onDone}) {
+  useEffect(()=>{const t=setTimeout(onDone,3000);return()=>clearTimeout(t);},[]);
+  return <div className="toast">{msg}</div>;
+}
+function Spinner() { return <div style={{padding:40}}><div className="spinner"/></div>; }
+
+// ── Modal ─────────────────────────────────────────────────
+function Modal({title,children,onClose,footer}) {
+  return <div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal">
+      <div className="modal-header">
+        <h2 style={{fontSize:16,fontWeight:600}}>{title}</h2>
+        <button className="btn btn-sm" onClick={onClose}>✕</button>
+      </div>
+      <div className="modal-body">{children}</div>
+      {footer&&<div className="modal-footer">{footer}</div>}
+    </div>
+  </div>;
+}
+
+// ── Login ─────────────────────────────────────────────────
+function Login({onLogin}) {
+  const [email,setEmail]=useState('');
+  const [pass,setPass]=useState('');
+  const [err,setErr]=useState('');
+  const [loading,setLoading]=useState(false);
+  async function submit(e) {
+    e.preventDefault(); setErr(''); setLoading(true);
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){setErr(error.message);setLoading(false);return;}
+    const {data:profile}=await sb.from('profiles').select('*').eq('id',data.user.id).single();
+    if(!profile||profile.status==='inactive'){setErr('Account inactive. Contact your administrator.');setLoading(false);return;}
+    onLogin(data.user,profile);
+    setLoading(false);
+  }
+  return <div className="login-wrap">
+    <div className="login-card">
+      <div style={{textAlign:'center',marginBottom:28}}>
+        <div style={{fontSize:28,marginBottom:4}}>📋</div>
+        <h1 style={{fontSize:20,fontWeight:700}}>ScheduleTrack</h1>
+        <p style={{color:'var(--gray)',fontSize:13,marginTop:4}}>Sign in to your account</p>
+      </div>
+      {err&&<div className="alert-error">{err}</div>}
+      <form onSubmit={submit}>
+        <div className="form-field"><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" required/></div>
+        <div className="form-field"><label>Password</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" required/></div>
+        <button className="btn-primary" type="submit" style={{width:'100%',padding:10,marginTop:4}} disabled={loading}>{loading?'Signing in…':'Sign in'}</button>
+      </form>
+    </div>
+  </div>;
+}
+
+// ── Sidebar ───────────────────────────────────────────────
+function Sidebar({profile,page,setPage,onLogout}) {
+  const role=profile.role;
+  const nav=[];
+  nav.push({icon:'📊',label:'Dashboard',page:'dashboard'});
+  if(role==='super_admin') nav.push({icon:'🏢',label:'Clients',page:'clients'});
+  if(role==='super_admin') nav.push({icon:'👥',label:'All Users',page:'users'});
+  if(role==='client_admin') nav.push({icon:'📍',label:'My Sites',page:'sites'});
+  if(role==='client_admin') nav.push({icon:'👥',label:'My Users',page:'users'});
+  nav.push({icon:'📅',label:'Events',page:'events'});
+  nav.push({icon:'🔍',label:'Observations',page:'observations'});
+  nav.push({icon:'📄',label:'Reports',page:'reports'});
+  if(role==='super_admin') nav.push({icon:'🕒',label:'Audit Trail',page:'audit'});
+  if(role!=='user') nav.push({icon:'✉️',label:'Email Alerts',page:'alerts'});
+  if(role==='super_admin') nav.push({icon:'⚙️',label:'Settings',page:'settings'});
+
+  return <div className="sidebar">
+    <div className="sidebar-logo">
+      <div style={{fontWeight:700,fontSize:15}}>📋 ScheduleTrack</div>
+      <div style={{fontSize:11,color:'var(--gray)',marginTop:2}}>Event &amp; Observation Manager</div>
+    </div>
+    <div style={{flex:1,overflowY:'auto',paddingTop:8}}>
+      <div className="nav-section-label">Menu</div>
+      {nav.map(n=><div key={n.page} className={`nav-item${page===n.page?' active':''}`} onClick={()=>setPage(n.page)}>
+        <span className="nav-icon">{n.icon}</span>{n.label}
+      </div>)}
+    </div>
+    <div className="sidebar-bottom">
+      <Avatar name={profile.full_name}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{profile.full_name}</div>
+        <div style={{fontSize:11,color:'var(--gray)'}}><Badge v={profile.role}/></div>
+      </div>
+      <button className="btn btn-sm" onClick={onLogout} title="Sign out">↩</button>
+    </div>
+  </div>;
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+function Dashboard({profile}) {
+  const [stats,setStats]=useState(null);
+  useEffect(()=>{loadStats();},[]);
+  async function loadStats() {
+    const cid=profile.client_id;
+    let evQ=sb.from('events').select('id,status,proposed_date,completion_date,client_id');
+    let obsQ=sb.from('observations').select('id,status,event_id');
+    if(cid){evQ=evQ.eq('client_id',cid);}
+    const [{data:evs},{data:obs}]=await Promise.all([evQ,obsQ]);
+    const events=evs||[];
+    const today=new Date(); today.setHours(0,0,0,0);
+    const in60=new Date(today); in60.setDate(in60.getDate()+60);
+    const upcoming=events.filter(e=>['planned','in_progress'].includes(e.status)&&new Date(e.proposed_date)>=today&&new Date(e.proposed_date)<=in60).length;
+    const overdue=events.filter(e=>e.status==='overdue').length;
+    const completed=events.filter(e=>e.status==='completed').length;
+    const total=events.length;
+    let openObs=0,closedObs=0;
+    if(obs){
+      const eventIds=events.map(e=>e.id);
+      const myObs=cid?obs.filter(o=>eventIds.includes(o.event_id)):obs;
+      openObs=myObs.filter(o=>o.status==='open').length;
+      closedObs=myObs.filter(o=>o.status==='closed').length;
+    }
+    let clients=0,sites=0;
+    if(profile.role==='super_admin'){
+      const [{count:cc},{count:sc}]=await Promise.all([
+        sb.from('clients').select('*',{count:'exact',head:true}),
+        sb.from('sites').select('*',{count:'exact',head:true})
+      ]);
+      clients=cc||0; sites=sc||0;
+    }
+    setStats({total,upcoming,overdue,completed,openObs,closedObs,clients,sites});
+  }
+  if(!stats) return <Spinner/>;
+  const isSA=profile.role==='super_admin';
+  return <div>
+    <div className="metric-grid">
+      {isSA&&<div className="metric"><div className="metric-label">Clients</div><div className="metric-value" style={{color:'var(--blue)'}}>{stats.clients}</div></div>}
+      {isSA&&<div className="metric"><div className="metric-label">Sites</div><div className="metric-value">{stats.sites}</div></div>}
+      <div className="metric"><div className="metric-label">Total events</div><div className="metric-value">{stats.total}</div></div>
+      <div className="metric"><div className="metric-label">Upcoming (60 days)</div><div className="metric-value" style={{color:'var(--blue)'}}>{stats.upcoming}</div></div>
+      <div className="metric"><div className="metric-label">Overdue</div><div className="metric-value" style={{color:'var(--red)'}}>{stats.overdue}</div></div>
+      <div className="metric"><div className="metric-label">Completed</div><div className="metric-value" style={{color:'var(--green)'}}>{stats.completed}</div></div>
+      <div className="metric"><div className="metric-label">Open observations</div><div className="metric-value" style={{color:'var(--amber)'}}>{stats.openObs}</div></div>
+      <div className="metric"><div className="metric-label">Closed observations</div><div className="metric-value" style={{color:'var(--green)'}}>{stats.closedObs}</div></div>
+    </div>
+    <RecentEvents profile={profile}/>
+  </div>;
+}
+
+function RecentEvents({profile}) {
+  const [events,setEvents]=useState([]);
+  useEffect(()=>{
+    let q=sb.from('events').select('*,sites(site_name),profiles!events_responsible_id_fkey(full_name)').order('proposed_date').limit(8);
+    if(profile.client_id) q=q.eq('client_id',profile.client_id);
+    q.then(({data})=>setEvents(data||[]));
+  },[]);
+  return <div className="card">
+    <div style={{fontWeight:600,marginBottom:12}}>Recent events</div>
+    {events.length===0?<div className="empty-state">No events yet.</div>:
+    <div className="table-wrap"><table>
+      <thead><tr><th>Event</th><th>Site</th><th>Proposed date</th><th>Responsible</th><th>Status</th></tr></thead>
+      <tbody>{events.map(e=><tr key={e.id}>
+        <td style={{fontWeight:500}}>{e.event_name}</td>
+        <td style={{color:'var(--gray)'}}>{e.sites?.site_name||'—'}</td>
+        <td>{fmt(e.proposed_date)}</td>
+        <td><div style={{display:'flex',alignItems:'center',gap:6}}><Avatar name={e.profiles?.full_name||'?'}/>{e.profiles?.full_name||'—'}</div></td>
+        <td><Badge v={e.status}/></td>
+      </tr>)}</tbody>
+    </table></div>}
+  </div>;
+}
+
+// ── Clients (Super Admin) ─────────────────────────────────
+function Clients({profile,toast}) {
+  const [clients,setClients]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(null);
+  const [form,setForm]=useState({company_name:'',max_sites:5,status:'active'});
+
+  useEffect(()=>{load();},[]);
+  async function load() {
+    setLoading(true);
+    const {data}=await sb.from('clients').select('*').order('company_name');
+    setClients(data||[]); setLoading(false);
+  }
+  async function save() {
+    if(!form.company_name.trim()){toast('Company name is required');return;}
+    if(modal==='add'){
+      const {error}=await sb.from('clients').insert({...form,max_sites:Number(form.max_sites)});
+      if(error){toast('Error: '+error.message);return;}
+      toast('Client created');
+    } else {
+      const {error}=await sb.from('clients').update({...form,max_sites:Number(form.max_sites)}).eq('id',modal.id);
+      if(error){toast('Error: '+error.message);return;}
+      toast('Client updated');
+    }
+    setModal(null); load();
+  }
+  function openEdit(c) { setForm({company_name:c.company_name,max_sites:c.max_sites,status:c.status}); setModal(c); }
+  function openAdd() { setForm({company_name:'',max_sites:5,status:'active'}); setModal('add'); }
+
+  return <div>
+    <div className="page-header">
+      <div><div className="page-title">Clients</div><div className="page-sub">Manage client accounts</div></div>
+      <button className="btn-primary btn" onClick={openAdd}>+ Add client</button>
+    </div>
+    {loading?<Spinner/>:<div className="card" style={{padding:0,overflow:'hidden'}}>
+      <table><thead><tr><th>Company</th><th>Max sites</th><th>Status</th><th></th></tr></thead>
+      <tbody>{clients.length===0?<tr><td colSpan={4}><div className="empty-state">No clients yet.</div></td></tr>:
+        clients.map(c=><tr key={c.id}>
+          <td style={{fontWeight:500}}>{c.company_name}</td>
+          <td>{c.max_sites}</td>
+          <td><Badge v={c.status}/></td>
+          <td><button className="btn btn-sm" onClick={()=>openEdit(c)}>Edit</button></td>
+        </tr>)}
+      </tbody></table>
+    </div>}
+    {modal&&<Modal title={modal==='add'?'Add client':'Edit client'} onClose={()=>setModal(null)}
+      footer={<><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn-primary btn" onClick={save}>Save</button></>}>
+      <div className="form-field"><label>Company name</label><input value={form.company_name} onChange={e=>setForm({...form,company_name:e.target.value})} placeholder="Company name"/></div>
+      <div className="form-row">
+        <div className="form-field"><label>Max sites allowed</label><input type="number" min={1} value={form.max_sites} onChange={e=>setForm({...form,max_sites:e.target.value})}/></div>
+        <div className="form-field"><label>Status</label><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+// ── Sites ─────────────────────────────────────────────────
+function Sites({profile,toast}) {
+  const [sites,setSites]=useState([]);
+  const [client,setClient]=useState(null);
+  const [modal,setModal]=useState(null);
+  const [form,setForm]=useState({site_name:''});
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{load();},[]);
+  async function load() {
+    setLoading(true);
+    const [{data:s},{data:c}]=await Promise.all([
+      sb.from('sites').select('*').eq('client_id',profile.client_id).order('site_name'),
+      sb.from('clients').select('*').eq('id',profile.client_id).single()
+    ]);
+    setSites(s||[]); setClient(c); setLoading(false);
+  }
+  async function save() {
+    if(!form.site_name.trim()){toast('Site name required');return;}
+    if(modal==='add'){
+      if(client&&sites.length>=client.max_sites){toast(`Site limit of ${client.max_sites} reached`);return;}
+      const {error}=await sb.from('sites').insert({site_name:form.site_name,client_id:profile.client_id});
+      if(error){toast('Error: '+error.message);return;}
+      toast('Site created');
+    } else {
+      const {error}=await sb.from('sites').update({site_name:form.site_name}).eq('id',modal.id);
+      if(error){toast('Error: '+error.message);return;}
+      toast('Site updated');
+    }
+    setModal(null); load();
+  }
+  async function del(id) {
+    if(!confirm('Delete this site? Events linked to it will also be affected.')) return;
+    await sb.from('sites').delete().eq('id',id);
+    toast('Site deleted'); load();
+  }
+
+  return <div>
+    <div className="page-header">
+      <div><div className="page-title">My Sites</div><div className="page-sub">{client?`${sites.length} of ${client.max_sites} sites used`:''}</div></div>
+      <button className="btn-primary btn" onClick={()=>{setForm({site_name:''});setModal('add');}}>+ Add site</button>
+    </div>
+    {loading?<Spinner/>:<div className="card" style={{padding:0,overflow:'hidden'}}>
+      <table><thead><tr><th>Site name</th><th></th></tr></thead>
+      <tbody>{sites.length===0?<tr><td colSpan={2}><div className="empty-state">No sites yet. Add your first site.</div></td></tr>:
+        sites.map(s=><tr key={s.id}>
+          <td style={{fontWeight:500}}>{s.site_name}</td>
+          <td><div style={{display:'flex',gap:6}}><button className="btn btn-sm" onClick={()=>{setForm({site_name:s.site_name});setModal(s);}}>Edit</button><button className="btn btn-sm btn-danger" onClick={()=>del(s.id)}>Delete</button></div></td>
+        </tr>)}
+      </tbody></table>
+    </div>}
+    {modal&&<Modal title={modal==='add'?'Add site':'Edit site'} onClose={()=>setModal(null)}
+      footer={<><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn-primary btn" onClick={save}>Save</button></>}>
+      <div className="form-field"><label>Site name</label><input value={form.site_name} onChange={e=>setForm({...form,site_name:e.target.value})} placeholder="e.g. Mumbai Terminal"/></div>
+    </Modal>}
+  </div>;
+}
+
+// ── Users ─────────────────────────────────────────────────
+function Users({profile,toast}) {
+  const [users,setUsers]=useState([]);
+  const [sites,setSites]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(null);
+  const [form,setForm]=useState({full_name:'',email:'',password:'',role:'user',status:'active',site_ids:[]});
+  const isSA=profile.role==='super_admin';
+
+  useEffect(()=>{load();},[]);
+  async function load() {
+    setLoading(true);
+    let q=sb.from('profiles').select('*').order('full_name');
+    if(!isSA) q=q.eq('client_id',profile.client_id).neq('role','super_admin');
+    const {data:u}=await q;
+    let s=[];
+    if(!isSA){const {data}=await sb.from('sites').select('*').eq('client_id',profile.client_id);s=data||[];}
+    setUsers(u||[]); setSites(s); setLoading(false);
+  }
+  async function save() {
+    if(!form.full_name.trim()||!form.email.trim()){toast('Name and email required');return;}
+    if(modal==='add'){
+      if(!form.password||form.password.length<6){toast('Password must be at least 6 characters');return;}
+      const {data,error}=await sb.auth.admin.createUser({email:form.email,password:form.password,email_confirm:true,user_metadata:{full_name:form.full_name,role:form.role,client_id:profile.client_id||''}});
+      if(error){toast('Error: '+error.message);return;}
+      await sb.from('profiles').upsert({id:data.user.id,full_name:form.full_name,role:form.role,client_id:profile.client_id||null,status:form.status});
+      if(form.site_ids.length>0){
+        await sb.from('site_access').insert(form.site_ids.map(sid=>({user_id:data.user.id,site_id:sid})));
+      }
+      toast('User created');
+    } else {
+      await sb.from('profiles').update({full_name:form.full_name,role:form.role,status:form.status}).eq('id',modal.id);
+      await sb.from('site_access').delete().eq('user_id',modal.id);
+      if(form.site_ids.length>0) await sb.from('site_access').insert(form.site_ids.map(sid=>({user_id:modal.id,site_id:sid})));
+      toast('User updated');
+    }
+    setModal(null); load();
+  }
+  function openEdit(u) {
+    setForm({full_name:u.full_name,email:'',password:'',role:u.role,status:u.status,site_ids:[]});
+    setModal(u);
+  }
+
+  return <div>
+    <div className="page-header">
+      <div><div className="page-title">Users</div><div className="page-sub">{isSA?'All users across all clients':'Users in your organisation'}</div></div>
+      {!isSA&&<button className="btn-primary btn" onClick={()=>{setForm({full_name:'',email:'',password:'',role:'user',status:'active',site_ids:[]});setModal('add');}}>+ Add user</button>}
+    </div>
+    {loading?<Spinner/>:<div className="card" style={{padding:0,overflow:'hidden'}}>
+      <table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+      <tbody>{users.length===0?<tr><td colSpan={4}><div className="empty-state">No users yet.</div></td></tr>:
+        users.map(u=><tr key={u.id}>
+          <td><div style={{display:'flex',alignItems:'center',gap:8}}><Avatar name={u.full_name}/><span style={{fontWeight:500}}>{u.full_name}</span></div></td>
+          <td><Badge v={u.role}/></td>
+          <td><Badge v={u.status}/></td>
+          <td>{!isSA&&<button className="btn btn-sm" onClick={()=>openEdit(u)}>Edit</button>}</td>
+        </tr>)}
+      </tbody></table>
+    </div>}
+    {modal&&<Modal title={modal==='add'?'Add user':'Edit user'} onClose={()=>setModal(null)}
+      footer={<><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn-primary btn" onClick={save}>Save</button></>}>
+      <div className="form-row">
+        <div className="form-field"><label>Full name</label><input value={form.full_name} onChange={e=>setForm({...form,full_name:e.target.value})} placeholder="Full name"/></div>
+        {modal==='add'&&<div className="form-field"><label>Email</label><input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="email@example.com"/></div>}
+      </div>
+      {modal==='add'&&<div className="form-field"><label>Password</label><input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Min 6 characters"/></div>}
+      <div className="form-row">
+        <div className="form-field"><label>Role</label><select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="client_admin">Client Admin</option><option value="user">User</option></select></div>
+        <div className="form-field"><label>Status</label><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+      {sites.length>0&&<div className="form-field"><label>Site access (hold Ctrl/Cmd to select multiple)</label>
+        <select multiple style={{height:100}} value={form.site_ids} onChange={e=>setForm({...form,site_ids:Array.from(e.target.selectedOptions,o=>o.value)})}>
+          {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
+        </select>
+      </div>}
+    </Modal>}
+  </div>;
+}
+
+// ── Events ────────────────────────────────────────────────
+function Events({profile,toast}) {
+  const [events,setEvents]=useState([]);
+  const [sites,setSites]=useState([]);
+  const [users,setUsers]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(null);
+  const [detail,setDetail]=useState(null);
+  const [filter,setFilter]=useState({status:'',site:'',search:''});
+  const blank={event_name:'',site_id:'',proposed_date:'',completion_date:'',responsible_id:'',status:'planned',has_obs:false,obs_desc:'',obs_action:'',obs_status:'open',obs_close:'',obs_remarks:''};
+  const [form,setForm]=useState(blank);
+
+  useEffect(()=>{load();},[]);
+  async function load() {
+    setLoading(true);
+    let q=sb.from('events').select('*,sites(site_name),profiles!events_responsible_id_fkey(full_name),observations(*)').order('proposed_date');
+    if(profile.client_id) q=q.eq('client_id',profile.client_id);
+    const {data:e}=await q;
+    let sq=sb.from('sites').select('*');
+    if(profile.client_id) sq=sq.eq('client_id',profile.client_id);
+    const {data:s}=await sq;
+    let uq=sb.from('profiles').select('*').eq('status','active');
+    if(profile.client_id) uq=uq.eq('client_id',profile.client_id);
+    const {data:u}=await uq;
+    setEvents(e||[]); setSites(s||[]); setUsers(u||[]); setLoading(false);
+  }
+  async function save() {
+    if(!form.event_name.trim()||!form.site_id||!form.proposed_date){toast('Event name, site and proposed date are required');return;}
+    const payload={event_name:form.event_name,site_id:form.site_id,proposed_date:form.proposed_date,completion_date:form.completion_date||null,responsible_id:form.responsible_id||null,status:form.status,client_id:profile.client_id,created_by:profile.id};
+    let eid;
+    if(modal==='add'){
+      const {data,error}=await sb.from('events').insert(payload).select().single();
+      if(error){toast('Error: '+error.message);return;}
+      eid=data.id;
+      await logAudit('created','event',eid,null,payload);
+    } else {
+      const {error}=await sb.from('events').update(payload).eq('id',modal.id);
+      if(error){toast('Error: '+error.message);return;}
+      eid=modal.id;
+      await logAudit('updated','event',eid,null,payload);
+    }
+    if(form.has_obs){
+      const obs={event_id:eid,description:form.obs_desc,required_action:form.obs_action,status:form.obs_status,closure_date:form.obs_close||null,closure_remarks:form.obs_remarks||null};
+      await sb.from('observations').upsert(obs,{onConflict:'event_id'});
+    } else {
+      await sb.from('observations').delete().eq('event_id',eid);
+    }
+    toast(modal==='add'?'Event created':'Event updated');
+    setModal(null); load();
+  }
+  async function logAudit(action,entity,id,old_val,new_val) {
+    await sb.from('audit_logs').insert({user_id:profile.id,client_id:profile.client_id,entity,entity_id:id,action,old_value:old_val,new_value:new_val});
+  }
+  function openAdd() { setForm({...blank,site_id:sites[0]?.id||'',responsible_id:profile.id}); setModal('add'); }
+  function openEdit(e) {
+    const obs=e.observations?.[0];
+    setForm({event_name:e.event_name,site_id:e.site_id,proposed_date:e.proposed_date,completion_date:e.completion_date||'',responsible_id:e.responsible_id||'',status:e.status,has_obs:!!obs,obs_desc:obs?.description||'',obs_action:obs?.required_action||'',obs_status:obs?.status||'open',obs_close:obs?.closure_date||'',obs_remarks:obs?.closure_remarks||''});
+    setModal(e);
+  }
+
+  const filtered=events.filter(e=>{
+    if(filter.status&&e.status!==filter.status) return false;
+    if(filter.site&&e.site_id!==filter.site) return false;
+    if(filter.search&&!e.event_name.toLowerCase().includes(filter.search.toLowerCase())) return false;
+    return true;
+  });
+
+  return <div>
+    <div className="page-header">
+      <div><div className="page-title">Events</div><div className="page-sub">Schedule and event management</div></div>
+      {profile.role!=='user'&&<button className="btn-primary btn" onClick={openAdd}>+ New event</button>}
+    </div>
+    <div className="filters">
+      <input placeholder="Search events…" value={filter.search} onChange={e=>setFilter({...filter,search:e.target.value})} style={{width:200}}/>
+      <select value={filter.status} onChange={e=>setFilter({...filter,status:e.target.value})}>
+        <option value="">All statuses</option>
+        <option value="planned">Planned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="overdue">Overdue</option>
+      </select>
+      {sites.length>0&&<select value={filter.site} onChange={e=>setFilter({...filter,site:e.target.value})}>
+        <option value="">All sites</option>
+        {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
+      </select>}
+    </div>
+    {loading?<Spinner/>:<div className="card" style={{padding:0,overflow:'hidden'}}>
+      <table><thead><tr><th>Event</th><th>Site</th><th>Proposed date</th><th>Responsible</th><th>Status</th><th>Observation</th><th></th></tr></thead>
+      <tbody>{filtered.length===0?<tr><td colSpan={7}><div className="empty-state">No events found.</div></td></tr>:
+        filtered.map(e=>{
+          const obs=e.observations?.[0];
+          return <tr key={e.id}>
+            <td style={{fontWeight:500}}>{e.event_name}</td>
+            <td style={{color:'var(--gray)'}}>{e.sites?.site_name||'—'}</td>
+            <td>{fmt(e.proposed_date)}</td>
+            <td><div style={{display:'flex',alignItems:'center',gap:6}}><Avatar name={e.profiles?.full_name||'?'}/>{e.profiles?.full_name||'—'}</div></td>
+            <td><Badge v={e.status}/></td>
+            <td>{obs?<Badge v={obs.status}/>:<span style={{color:'var(--gray)',fontSize:11}}>None</span>}</td>
+            <td><div style={{display:'flex',gap:4}}>
+              <button className="btn btn-sm" onClick={()=>setDetail(e)}>View</button>
+              {profile.role!=='user'&&<button className="btn btn-sm" onClick={()=>openEdit(e)}>Edit</button>}
+            </div></td>
+          </tr>;
+        })}
+      </tbody></table>
+    </div>}
+
+    {modal&&<Modal title={modal==='add'?'New event':'Edit event'} onClose={()=>setModal(null)}
+      footer={<><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn-primary btn" onClick={save}>Save event</button></>}>
+      <div className="section-title">Basic information</div>
+      <div className="form-field"><label>Event name *</label><input value={form.event_name} onChange={e=>setForm({...form,event_name:e.target.value})} placeholder="e.g. Annual Fire Drill"/></div>
+      <div className="form-row">
+        <div className="form-field"><label>Site *</label><select value={form.site_id} onChange={e=>setForm({...form,site_id:e.target.value})}><option value="">Select site</option>{sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}</select></div>
+        <div className="form-field"><label>Proposed date *</label><input type="date" value={form.proposed_date} onChange={e=>setForm({...form,proposed_date:e.target.value})}/></div>
+      </div>
+      <div className="form-row">
+        <div className="form-field"><label>Responsible person</label><select value={form.responsible_id} onChange={e=>setForm({...form,responsible_id:e.target.value})}><option value="">Select person</option>{users.map(u=><option key={u.id} value={u.id}>{u.full_name}</option>)}</select></div>
+        <div className="form-field"><label>Status</label><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="planned">Planned</option><option value="in_progress">In Progress</option><option value="completed">Completed</option><option value="overdue">Overdue</option></select></div>
+      </div>
+      <div className="form-field"><label>Actual completion date</label><input type="date" value={form.completion_date} onChange={e=>setForm({...form,completion_date:e.target.value})}/></div>
+      <div className="section-title">Observation</div>
+      <div className="form-field">
+        <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
+          <input type="checkbox" checked={form.has_obs} onChange={e=>setForm({...form,has_obs:e.target.checked})} style={{width:'auto'}}/>
+          Observation present
+        </label>
+      </div>
+      {form.has_obs&&<>
+        <div className="form-field"><label>Observation description</label><textarea value={form.obs_desc} onChange={e=>setForm({...form,obs_desc:e.target.value})} placeholder="Describe the observation…"/></div>
+        <div className="form-field"><label>Required close-out action</label><textarea value={form.obs_action} onChange={e=>setForm({...form,obs_action:e.target.value})} placeholder="What action is needed to close this?"/></div>
+        <div className="form-row">
+          <div className="form-field"><label>Observation status</label><select value={form.obs_status} onChange={e=>setForm({...form,obs_status:e.target.value})}><option value="open">Open</option><option value="under_review">Under Review</option><option value="closed">Closed</option></select></div>
+          <div className="form-field"><label>Closure date</label><input type="date" value={form.obs_close} onChange={e=>setForm({...form,obs_close:e.target.value})}/></div>
+        </div>
+        <div className="form-field"><label>Closure remarks</label><textarea value={form.obs_remarks} onChange={e=>setForm({...form,obs_remarks:e.target.value})} placeholder="Remarks on how it was closed…"/></div>
+      </>}
+    </Modal>}
+
+    {detail&&<EventDetail event={detail} profile={profile} onClose={()=>setDetail(null)} toast={toast}/>}
+  </div>;
+}
+
+// ── Event Detail Modal ────────────────────────────────────
+function EventDetail({event,profile,onClose,toast}) {
+  const [comments,setComments]=useState([]);
+  const [attachments,setAttachments]=useState([]);
+  const [comment,setComment]=useState('');
+  const [uploading,setUploading]=useState(false);
+  const fileRef=useRef();
+  const obs=event.observations?.[0];
+
+  useEffect(()=>{
+    sb.from('comments').select('*,profiles(full_name)').eq('event_id',event.id).order('created_at').then(({data})=>setComments(data||[]));
+    sb.from('attachments').select('*').eq('event_id',event.id).order('created_at').then(({data})=>setAttachments(data||[]));
+  },[]);
+
+  async function addComment() {
+    if(!comment.trim()) return;
+    await sb.from('comments').insert({event_id:event.id,author_id:profile.id,body:comment});
+    setComment('');
+    const {data}=await sb.from('comments').select('*,profiles(full_name)').eq('event_id',event.id).order('created_at');
+    setComments(data||[]);
+    toast('Comment added');
+  }
+
+  async function uploadFile(e) {
+    const file=e.target.files[0]; if(!file) return;
+    setUploading(true);
+    const path=`${profile.id}/${event.id}/${Date.now()}_${file.name}`;
+    const {error}=await sb.storage.from('event-attachments').upload(path,file);
+    if(error){toast('Upload error: '+error.message);setUploading(false);return;}
+    await sb.from('attachments').insert({event_id:event.id,file_name:file.name,file_path:path,file_size:file.size,mime_type:file.type,uploaded_by:profile.id});
+    const {data}=await sb.from('attachments').select('*').eq('event_id',event.id).order('created_at');
+    setAttachments(data||[]); setUploading(false); toast('File uploaded');
+  }
+
+  async function downloadFile(att) {
+    const {data,error}=await sb.storage.from('event-attachments').createSignedUrl(att.file_path,60);
+    if(error){toast('Download error');return;}
+    window.open(data.signedUrl,'_blank');
+  }
+
+  return <Modal title={event.event_name} onClose={onClose} footer={<button className="btn" onClick={onClose}>Close</button>}>
+    <div className="section-title">Event details</div>
+    <div className="detail-row"><div className="detail-label">Site</div><div className="detail-value">{event.sites?.site_name||'—'}</div></div>
+    <div className="detail-row"><div className="detail-label">Proposed date</div><div className="detail-value">{fmt(event.proposed_date)}</div></div>
+    <div className="detail-row"><div className="detail-label">Completion date</div><div className="detail-value">{event.completion_date?fmt(event.completion_date):<span style={{color:'var(--gray)'}}>Not yet completed</span>}</div></div>
+    <div className="detail-row"><div className="detail-label">Responsible</div><div className="detail-value">{event.profiles?.full_name||'—'}</div></div>
+    <div className="detail-row"><div className="detail-label">Status</div><div className="detail-value"><Badge v={event.status}/></div></div>
+
+    {obs&&<><div className="section-title">Observation</div>
+      <div className="detail-row"><div className="detail-label">Description</div><div className="detail-value">{obs.description}</div></div>
+      <div className="detail-row"><div className="detail-label">Required action</div><div className="detail-value">{obs.required_action||'—'}</div></div>
+      <div className="detail-row"><div className="detail-label">Status</div><div className="detail-value"><Badge v={obs.status}/></div></div>
+      <div className="detail-row"><div className="detail-label">Closure date</div><div className="detail-value">{obs.closure_date?fmt(obs.closure_date):<span style={{color:'var(--gray)'}}>Pending</span>}</div></div>
+      {obs.closure_remarks&&<div className="detail-row"><div className="detail-label">Closure remarks</div><div className="detail-value">{obs.closure_remarks}</div></div>}
+    </>}
+
+    <div className="section-title">Attachments</div>
+    {attachments.map(a=><div key={a.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid var(--border)'}}>
+      <span style={{flex:1,fontSize:13}}>{a.file_name}</span>
+      <span style={{fontSize:11,color:'var(--gray)'}}>{a.file_size?(a.file_size/1024).toFixed(0)+' KB':''}</span>
+      <button className="btn btn-sm" onClick={()=>downloadFile(a)}>Download</button>
+    </div>)}
+    <div style={{marginTop:8}}>
+      <input type="file" ref={fileRef} style={{display:'none'}} onChange={uploadFile}/>
+      <button className="btn btn-sm" onClick={()=>fileRef.current.click()} disabled={uploading}>{uploading?'Uploading…':'+ Attach file'}</button>
+    </div>
+
+    <div className="section-title">Comments</div>
+    {comments.map(c=><div key={c.id} className="comment-box">
+      <div className="comment-meta">{c.profiles?.full_name||'—'} · {new Date(c.created_at).toLocaleString('en-IN')}</div>
+      <div style={{fontSize:13}}>{c.body}</div>
+    </div>)}
+    <div style={{display:'flex',gap:8,marginTop:8}}>
+      <input value={comment} onChange={e=>setComment(e.target.value)} placeholder="Add a comment…" onKeyDown={e=>e.key==='Enter'&&addComment()}/>
+      <button className="btn btn-sm btn-primary" onClick={addComment}>Post</button>
+    </div>
+  </Modal>;
+}
+
+// ── Observations ──────────────────────────────────────────
+function Observations({profile,toast}) {
+  const [obs,setObs]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [filter,setFilter]=useState('');
+
+  useEffect(()=>{load();},[]);
+  async function load() {
+    setLoading(true);
+    let q=sb.from('observations').select('*,events(event_name,proposed_date,client_id,sites(site_name))').order('created_at',{ascending:false});
+    if(profile.client_id){
+      q=sb.from('observations').select('*,events!inner(event_name,proposed_date,client_id,sites(site_name))').eq('events.client_id',profile.client_id).order('created_at',{ascending:false});
+    }
+    const {data}=await q;
+    setObs(data||[]); setLoading(false);
+  }
+  const filtered=obs.filter(o=>!filter||o.status===filter);
+  return <div>
+    <div className="page-header">
+      <div><div className="page-title">Observations</div><div className="page-sub">Track and close all observations</div></div>
+    </div>
+    <div className="filters">
+      <select value={filter} onChange={e=>setFilter(e.target.value)}>
+        <option value="">All statuses</option>
+        <option value="open">Open</option>
+        <option value="under_review">Under Review</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    {loading?<Spinner/>:<div className="card" style={{padding:0,overflow:'hidden'}}>
+      <table><thead><tr><th>Event</th><th>Site</th><th>Description</th><th>Status</th><th>Closure date</th></tr></thead>
+      <tbody>{filtered.length===0?<tr><td colSpan={5}><div className="empty-state">No observations found.</div></td></tr>:
+        filtered.map(o=><tr key={o.id}>
+          <td style={{fontWeight:500}}>{o.events?.event_name||'—'}</td>
+          <td style={{color:'var(--gray)'}}>{o.events?.sites?.site_name||'—'}</td>
+          <td style={{maxWidth:240,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{o.description}</td>
+          <td><Badge v={o.status}/></td>
+          <td>{o.closure_date?fmt(o.closure_date):<span style={{color:'var(--gray)'}}>Pending</span>}</td>
+        </tr>)}
+      </tbody></table>
+    </div>}
+  </div>;
+}
+
+// ── Reports ───────────────────────────────────────────────
+function Reports({profile,toast}) {
+  const reports=[
+    {title:'Event Schedule Report',desc:'All events with status and dates'},
+    {title:'Upcoming Events Report',desc:'Events due within the next 60 days'},
+    {title:'Overdue Events Report',desc:'Events past proposed date with no completion'},
+    {title:'Open Observations Report',desc:'All observations without a closure date'},
+    {title:'Observation Closure Report',desc:'Closed observations with remarks'},
+    {title:'Site-wise Report',desc:'Event and observation summary per site'},
+    {title:'Monthly Summary Report',desc:'Monthly completion and overdue trends'},
+  ];
+  async function exportCSV(title) {
+    let data=[];
+    const cid=profile.client_id;
+    if(title==='Upcoming Events Report') {
+      const today=new Date().toISOString().slice(0,10);
+      const in60=new Date(Date.now()+60*86400000).toISOString().slice(0,10);
+      let q=sb.from('events').select('event_name,proposed_date,status,sites(site_name),profiles!events_responsible_id_fkey(full_name)').gte('proposed_date',today).lte('proposed_date',in60).in('status',['planned','in_progress']);
+      if(cid) q=q.eq('client_id',cid);
+      const {data:d}=await q; data=d||[];
+    } else if(title==='Overdue Events Report') {
+      let q=sb.from('events').select('event_name,proposed_date,status,sites(site_name),profiles!events_responsible_id_fkey(full_name)').eq('status','overdue');
+      if(cid) q=q.eq('client_id',cid);
+      const {data:d}=await q; data=d||[];
+    } else {
+      let q=sb.from('events').select('event_name,proposed_date,completion_date,status,sites(site_name),profiles!events_responsible_id_fkey(full_name)');
+      if(cid) q=q.eq('client_id',cid);
+      const {data:d}=await q; data=d||[];
+    }
+    if(!data.length){toast('No data to export');return;}
+    const rows=[['Event','Site','Proposed Date','Completion Date','Status','Responsible'],...data.map(e=>[e.event_name,e.sites?.site_name||'',e.proposed_date||'',e.completion_date||'',e.status,e.profiles?.full_name||''])];
+    const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=title.replace(/ /g,'_')+'.csv'; a.click();
+    toast('CSV downloaded');
+  }
+  return <div>
+    <div className="page-header"><div><div className="page-title">Reports</div><div className="page-sub">Export and download</div></div></div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:16}}>
+      {reports.map(r=><div key={r.title} className="card">
+        <div style={{fontWeight:600,marginBottom:4}}>{r.title}</div>
+        <div style={{fontSize:12,color:'var(--gray)',marginBottom:12}}>{r.desc}</div>
+        <button className="btn btn-sm" onClick={()=>exportCSV(r.title)}>⬇ Export CSV</button>
+      </div>)}
+    </div>
+  </div>;
+}
+
+// ── Audit Trail ───────────────────────────────────────────
+function Audit({profile}) {
+  const [logs,setLogs]=useState([]);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    sb.from('audit_logs').select('*,profiles(full_name)').order('created_at',{ascending:false}).limit(100).then(({data})=>{setLogs(data||[]);setLoading(false);});
+  },[]);
+  return <div>
+    <div className="page-header"><div><div className="page-title">Audit trail</div><div className="page-sub">Complete change history</div></div></div>
+    {loading?<Spinner/>:<div className="card" style={{padding:0,overflow:'hidden'}}>
+      <table><thead><tr><th>User</th><th>Action</th><th>Entity</th><th>Date &amp; time</th></tr></thead>
+      <tbody>{logs.length===0?<tr><td colSpan={4}><div className="empty-state">No audit logs yet.</div></td></tr>:
+        logs.map(l=><tr key={l.id}>
+          <td><div style={{display:'flex',alignItems:'center',gap:8}}><Avatar name={l.profiles?.full_name||'?'}/>{l.profiles?.full_name||'—'}</div></td>
+          <td>{l.action} {l.entity}</td>
+          <td><Badge v={l.entity==='event'?'planned':l.entity==='observation'?'open':'user'}/></td>
+          <td style={{color:'var(--gray)',fontSize:12}}>{new Date(l.created_at).toLocaleString('en-IN')}</td>
+        </tr>)}
+      </tbody></table>
+    </div>}
+  </div>;
+}
+
+// ── Email Alerts ──────────────────────────────────────────
+function Alerts({profile,toast}) {
+  const [settings,setSettings]=useState(null);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    const cid=profile.client_id;
+    if(!cid){setLoading(false);return;}
+    sb.from('alert_settings').select('*').eq('client_id',cid).single().then(({data})=>{
+      setSettings(data||{client_id:cid,send_day:'Monday',send_time:'08:00',include_upcoming:true,include_overdue:true,include_open_obs:true,notify_admin:true,notify_users:true,extra_emails:[]});
+      setLoading(false);
+    });
+  },[]);
+  async function save() {
+    const {error}=await sb.from('alert_settings').upsert({...settings},{onConflict:'client_id'});
+    if(error){toast('Error: '+error.message);return;}
+    toast('Alert settings saved');
+  }
+  if(loading) return <Spinner/>;
+  if(!settings) return <div className="alert-info">Email alerts are configured per client. Select a client first.</div>;
+  const f=(k,v)=>setSettings({...settings,[k]:v});
+  return <div>
+    <div className="page-header"><div><div className="page-title">Email alerts</div><div className="page-sub">Weekly notification schedule</div></div></div>
+    <div className="card" style={{marginBottom:16}}>
+      <div style={{fontWeight:600,marginBottom:12}}>Schedule</div>
+      <div className="form-row">
+        <div className="form-field"><label>Send day</label><select value={settings.send_day} onChange={e=>f('send_day',e.target.value)}>{['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d=><option key={d}>{d}</option>)}</select></div>
+        <div className="form-field"><label>Send time</label><input type="time" value={settings.send_time} onChange={e=>f('send_time',e.target.value)}/></div>
+      </div>
+    </div>
+    <div className="card" style={{marginBottom:16}}>
+      <div style={{fontWeight:600,marginBottom:12}}>Alert content</div>
+      {[['include_upcoming','Upcoming events','Events due within 60 days'],['include_overdue','Overdue events','Past due date with no completion'],['include_open_obs','Open observations','Observations without closure date']].map(([k,label,desc])=>(
+        <label key={k} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'}}>
+          <input type="checkbox" checked={!!settings[k]} onChange={e=>f(k,e.target.checked)} style={{width:'auto'}}/>
+          <div><div style={{fontWeight:500}}>{label}</div><div style={{fontSize:12,color:'var(--gray)'}}>{desc}</div></div>
+        </label>
+      ))}
+    </div>
+    <div className="card" style={{marginBottom:16}}>
+      <div style={{fontWeight:600,marginBottom:12}}>Recipients</div>
+      {[['notify_admin','Always notify client admin'],['notify_users','Notify assigned users']].map(([k,label])=>(
+        <label key={k} style={{display:'flex',alignItems:'center',gap:10,marginBottom:10,cursor:'pointer'}}>
+          <input type="checkbox" checked={!!settings[k]} onChange={e=>f(k,e.target.checked)} style={{width:'auto'}}/>{label}
+        </label>
+      ))}
+      <div className="form-field"><label>Additional emails (comma-separated)</label><input value={(settings.extra_emails||[]).join(', ')} onChange={e=>f('extra_emails',e.target.value.split(',').map(x=>x.trim()).filter(Boolean))} placeholder="ops@company.com, hse@company.com"/></div>
+    </div>
+    <button className="btn-primary btn" onClick={save}>Save settings</button>
+  </div>;
+}
+
+// ── Settings ──────────────────────────────────────────────
+function Settings({profile,toast}) {
+  const [smtp,setSmtp]=useState({host:'',port:'587',user:'',from:''});
+  return <div>
+    <div className="page-header"><div><div className="page-title">Settings</div><div className="page-sub">Platform configuration</div></div></div>
+    <div className="card" style={{marginBottom:16}}>
+      <div style={{fontWeight:600,marginBottom:12}}>Email (SMTP via Resend)</div>
+      <div className="alert-info">Use <strong>smtp.resend.com</strong> port <strong>465</strong>, your Resend API key as the password, and <strong>alerts@pranshworkspace.com</strong> as the from address once your domain is verified.</div>
+      <div className="form-row">
+        <div className="form-field"><label>SMTP host</label><input value={smtp.host} onChange={e=>setSmtp({...smtp,host:e.target.value})} placeholder="smtp.resend.com"/></div>
+        <div className="form-field"><label>Port</label><input value={smtp.port} onChange={e=>setSmtp({...smtp,port:e.target.value})} placeholder="465"/></div>
+      </div>
+      <div className="form-row">
+        <div className="form-field"><label>Username</label><input value={smtp.user} onChange={e=>setSmtp({...smtp,user:e.target.value})} placeholder="resend"/></div>
+        <div className="form-field"><label>From address</label><input value={smtp.from} onChange={e=>setSmtp({...smtp,from:e.target.value})} placeholder="alerts@pranshworkspace.com"/></div>
+      </div>
+      <button className="btn btn-sm btn-primary" onClick={()=>toast('SMTP settings saved — configure Edge Function next')}>Save</button>
+    </div>
+    <div className="card">
+      <div style={{fontWeight:600,marginBottom:8}}>Your Supabase project</div>
+      <div style={{fontSize:13,color:'var(--gray)'}}>Project URL: <code>https://becoowtveruxxtfkhpmm.supabase.co</code></div>
+    </div>
+  </div>;
+}
+
+// ── App Shell ─────────────────────────────────────────────
+function App() {
+  const [user,setUser]=useState(null);
+  const [profile,setProfile]=useState(null);
+  const [page,setPage]=useState('dashboard');
+  const [toast,setToast]=useState('');
+  const [booting,setBooting]=useState(true);
+
+  useEffect(()=>{
+    sb.auth.getSession().then(({data:{session}})=>{
+      if(session){
+        sb.from('profiles').select('*').eq('id',session.user.id).single().then(({data})=>{
+          if(data){setUser(session.user);setProfile(data);}
+          setBooting(false);
+        });
+      } else setBooting(false);
+    });
+    const {data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{
+      if(!session){setUser(null);setProfile(null);}
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  async function handleLogout() {
+    await sb.auth.signOut();
+    setUser(null); setProfile(null); setPage('dashboard');
+  }
+
+  function showToast(msg){setToast(msg);setTimeout(()=>setToast(''),3200);}
+
+  if(booting) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}><Spinner/></div>;
+  if(!user||!profile) return <Login onLogin={(u,p)=>{setUser(u);setProfile(p);}}/>;
+
+  const pages={
+    dashboard:<Dashboard profile={profile}/>,
+    clients:<Clients profile={profile} toast={showToast}/>,
+    sites:<Sites profile={profile} toast={showToast}/>,
+    users:<Users profile={profile} toast={showToast}/>,
+    events:<Events profile={profile} toast={showToast}/>,
+    observations:<Observations profile={profile} toast={showToast}/>,
+    reports:<Reports profile={profile} toast={showToast}/>,
+    audit:<Audit profile={profile}/>,
+    alerts:<Alerts profile={profile} toast={showToast}/>,
+    settings:<Settings profile={profile} toast={showToast}/>,
+  };
+
+  return <div style={{display:'flex'}}>
+    <Sidebar profile={profile} page={page} setPage={setPage} onLogout={handleLogout}/>
+    <div className="main">
+      <div className="content">{pages[page]||pages.dashboard}</div>
+    </div>
+    {toast&&<Toast msg={toast} onDone={()=>setToast('')}/>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
